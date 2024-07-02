@@ -1,0 +1,6 @@
+/venv
+config.ini
+
+/results/*
+/src/*
+/logs/*
