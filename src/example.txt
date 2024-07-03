@@ -1,6 +1,9 @@
-#chat - если первый символ #, то такая строка будет игнорироваться
-https://t.me/+RGLOaTSBjK0yZGJi
-tondev
+# - символ решетки игнорирует строку
+
+# публичные чаты должны быть в формате chat_username или @chat_username
+# приватные чаты должный быть в формате https://t.me/xxxxxxxxxxxxx
+
 travelintheukchat
+https://t.me/+RGLOaTSBjK0yZGJi
 robota_kyiv_shark
 https://t.me/+7BIozh1qh71mZTU0
