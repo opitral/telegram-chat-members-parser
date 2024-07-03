@@ -2,5 +2,11 @@
 config.ini
 
 /results/*
+!/results/example.json
+
 /src/*
+!/src/example.txt
+
 /logs/*
+
+*.session

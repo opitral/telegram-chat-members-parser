@@ -1,10 +1,11 @@
 from telegram_chat_members_parser import Parser
+import asyncio
 
 
-def main():
+async def main():
     parser = Parser()
-    parser.create_db()
+    await parser.create_db()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
