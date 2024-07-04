@@ -1,6 +1,3 @@
-# TODO
-# getting chat history from last 3 month
-
 import json
 import os
 import sys
@@ -131,6 +128,7 @@ async def main():
 
     try:
         my_account = await bot.get_me()
+        current_datetime = datetime.now()
         for chat_link in targeted_chats:
             try:
                 current_chat_members = []
@@ -178,6 +176,10 @@ async def main():
                 logger.info("Parsing type: messages")
                 async for message in bot.get_chat_history(current_chat.id):
                     try:
+                        date_difference = current_datetime - message.date
+                        if date_difference.days >= 90:
+                            break
+
                         if (message.from_user.is_bot or
                                 message.from_user.is_deleted or
                                 message.from_user.id in tg_lead_ids or
@@ -226,4 +228,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
