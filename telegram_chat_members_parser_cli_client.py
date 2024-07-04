@@ -218,6 +218,7 @@ async def main():
 
             except Exception as ex:
                 logger.error(f"Error parsing members, details: {ex}")
+                continue
 
             finally:
                 await bot.leave_chat(current_chat.id)

@@ -8,6 +8,6 @@ config.ini
 /src/*
 !/src/example.txt
 
-/logs/*
+logs/*
 
 *.session
