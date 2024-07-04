@@ -1,5 +1,4 @@
 # TODO
-# filter members, who was online most than month
 # getting chat history from last 3 month
 
 import json
@@ -11,7 +10,7 @@ import logging
 import configparser
 
 from pyrogram import Client
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus, UserStatus
 
 from typing import List, Dict
 
@@ -147,7 +146,8 @@ async def main():
                                 member.status == ChatMemberStatus.OWNER or
                                 member.status == ChatMemberStatus.ADMINISTRATOR or
                                 member.user.id in tg_lead_ids or
-                                member.user.id == my_account.id):
+                                member.user.id == my_account.id or
+                                member.user.status == UserStatus.LONG_AGO):
                             continue
 
                         lead = {
@@ -181,7 +181,8 @@ async def main():
                         if (message.from_user.is_bot or
                                 message.from_user.is_deleted or
                                 message.from_user.id in tg_lead_ids or
-                                message.from_user.id == my_account.id):
+                                message.from_user.id == my_account.id or
+                                message.from_user.status == UserStatus.LONG_AGO):
                             continue
 
                         lead = {
