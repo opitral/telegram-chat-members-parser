@@ -40,9 +40,9 @@
 ### Запуск скрипта
 Запуск парсера выполняется одной простой командой
 #### Linux/MacOS
-`python3 parser_cli_client.py example.txt`, где вместо `example.txt` название вашего текстового файла.
+`python3 telegram_chat_members_parser_cli_client.py example.txt`, где вместо `example.txt` название вашего текстового файла.
 #### Windows
-`python parser_cli_client.py example.txt`, где вместо `example.txt` название вашего текстового файла.
+`python telegram_chat_members_parser_cli_client.py example.txt`, где вместо `example.txt` название вашего текстового файла.
 #### Первый запуск
 Во время первого запуска вы должны создать сессию для рабочего аккаунта. Введите номер телефона, код и пройдите 2FA.
 #### Выходной файл
