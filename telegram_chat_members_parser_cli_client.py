@@ -142,7 +142,6 @@ async def main():
                         if (member.user.is_bot or
                                 member.user.is_deleted or
                                 member.status == ChatMemberStatus.OWNER or
-                                member.status == ChatMemberStatus.ADMINISTRATOR or
                                 member.user.id in tg_lead_ids or
                                 member.user.id == my_account.id or
                                 member.user.status == UserStatus.LONG_AGO):
@@ -221,9 +220,18 @@ async def main():
                 continue
 
             finally:
-                if current_chat:
+                try:
                     await bot.leave_chat(current_chat.id)
+
+                except Exception as ex:
+                    logger.error(ex)
+                    logger.warning(f"Account was banned in: {chat_link}")
+
+                else:
                     logger.info(f"Leaved chat: {chat_link}")
+
+    except Exception as ex:
+        logger.error(ex)
 
     finally:
         await bot.stop()
