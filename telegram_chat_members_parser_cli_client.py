@@ -99,7 +99,7 @@ def create_db(db_name: str, target_chats: List[str]) -> str:
                 last_name VARCHAR(255),
                 phone_number VARCHAR(255),
                 target_chat_id INTEGER NOT NULL,
-                status VARCHAR(50) DEFAULT 'awaits' NOT NULL,
+                status VARCHAR(50) DEFAULT 'free' NOT NULL,
                 FOREIGN KEY (target_chat_id) REFERENCES target_chats(id)
             )
         ''')
