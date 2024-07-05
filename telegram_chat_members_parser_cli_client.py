@@ -38,16 +38,19 @@ bot = Client(session, api_id, api_hash)
 logger.info(f"Session started: {session}")
 
 
-def get_chats(file_path: str) -> List[str]:
+def get_chats(txt_name: str) -> List[str]:
+    txt_path = os.path.join(os.getcwd(), "src", f"{txt_name}.txt")
+    os.makedirs(os.path.dirname(txt_path), exist_ok=True)
+
     try:
-        with open(file_path, "r") as f:
+        with open(txt_path, "r") as f:
             file_data = f.read()
 
         chats = file_data.split("\n")
         chats = [chat.strip() for chat in chats if chat and not chat.startswith("#")]
 
     except FileNotFoundError:
-        logger.error(f"File \"{file_path}\" not found")
+        logger.error(f"File \"{txt_path}\" not found")
         sys.exit(1)
 
     except Exception as ex:
@@ -150,12 +153,8 @@ def update_db(db_name: str, member: Dict):
 
 
 async def main():
-    txt_name = sys.argv[1]
-    txt_path = os.path.join(os.getcwd(), "src", f"{txt_name}.txt")
-    os.makedirs(os.path.dirname(txt_path), exist_ok=True)
-    db_name = txt_name
-
-    target_chats_list = get_chats(txt_path)
+    db_name = sys.argv[1]
+    target_chats_list = get_chats(db_name)
     db_path = create_db(db_name, target_chats_list)
 
     conn = sqlite3.connect(db_path)
