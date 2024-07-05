@@ -203,7 +203,6 @@ async def main():
                         }
 
                         update_db(db_name, lead)
-                        logger.info(lead)
 
                     except Exception as ex:
                         logger.error(f"Error parsing list {member}, details: {ex}")
@@ -239,7 +238,6 @@ async def main():
                         }
 
                         update_db(db_name, lead)
-                        logger.info(lead)
 
                     except Exception as ex:
                         logger.error(f"Error parsing messages {message}, details: {ex}")
