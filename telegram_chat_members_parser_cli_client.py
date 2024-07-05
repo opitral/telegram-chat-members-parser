@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from datetime import datetime
 import asyncio
 import logging
@@ -38,6 +39,12 @@ api_hash = config["Telegram"]["api_hash"]
 
 bot = Client(session, api_id, api_hash)
 logger.info(f"Session started: {session}")
+
+
+def format_seconds(seconds):
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
 
 
 def get_chats(txt_name: str) -> List[str]:
@@ -164,6 +171,7 @@ async def main():
 
     current_chat = None
     await bot.start()
+    start_timer = time.time()
 
     try:
         account = await bot.get_me()
@@ -182,9 +190,9 @@ async def main():
                     try:
                         if (member.user.is_bot or
                                 member.user.is_deleted or
+                                member.user.status == UserStatus.LONG_AGO or
                                 member.status == ChatMemberStatus.OWNER or
-                                member.user.id == account.id or
-                                member.user.status == UserStatus.LONG_AGO):
+                                member.user.id == account.id):
                             continue
 
                         cursor.execute("SELECT * FROM members WHERE telegram_id = ?", (member.user.id,))
@@ -215,11 +223,11 @@ async def main():
                         if date_difference.days >= 90:
                             break
 
-                        if (message.from_user.is_bot or
+                        if (message.sender_chat or
+                                message.from_user.is_bot or
                                 message.from_user.is_deleted or
-                                message.from_user.id == account.id or
                                 message.from_user.status == UserStatus.LONG_AGO or
-                                message.sender_chat):
+                                message.from_user.id == account.id):
                             continue
 
                         cursor.execute("SELECT * FROM members WHERE telegram_id = ?", (message.from_user.id,))
@@ -270,6 +278,8 @@ async def main():
         logger.error(ex)
 
     finally:
+        total_timer = time.time() - start_timer
+        logger.info(f"Script worked: {format_seconds(total_timer)}")
         conn.close()
         await bot.stop()
 
