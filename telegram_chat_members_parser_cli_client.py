@@ -11,6 +11,8 @@ from pyrogram.enums import ChatMemberStatus, UserStatus
 
 from typing import List, Dict
 
+from pyrogram.errors import FloodWait
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -246,6 +248,9 @@ async def main():
                 cursor.execute("SELECT members_count FROM target_chats WHERE id = ?", (chat[0],))
                 current_chat_members_count = cursor.fetchone()[0]
                 logger.info(f"From {chat[1]} received members: {current_chat_members_count}")
+
+            except FloodWait as e:
+                await asyncio.sleep(e.value)
 
             except Exception as ex:
                 logger.error(f"Error parsing members, details: {ex}")
