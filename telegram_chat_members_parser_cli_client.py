@@ -250,6 +250,7 @@ async def main():
                 logger.info(f"From {chat[1]} received members: {current_chat_members_count}")
 
             except FloodWait as e:
+                logger.warning(f"Flood wait: {e.value} seconds")
                 await asyncio.sleep(e.value)
 
             except Exception as ex:
