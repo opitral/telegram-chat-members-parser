@@ -3,7 +3,7 @@
 config.ini
 
 /results/*
-!/results/example.json
+!/results/example.db
 
 /src/*
 !/src/example.txt

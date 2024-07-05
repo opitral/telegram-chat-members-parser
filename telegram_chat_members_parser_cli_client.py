@@ -1,10 +1,10 @@
-import json
 import os
 import sys
 from datetime import datetime
 import asyncio
 import logging
 import configparser
+import sqlite3
 
 from pyrogram import Client
 from pyrogram.enums import ChatMemberStatus, UserStatus
@@ -44,8 +44,7 @@ def get_chats(file_path: str) -> List[str]:
             file_data = f.read()
 
         chats = file_data.split("\n")
-        chats = [chat for chat in chats if chat]
-        chats = [chat for chat in chats if not chat.startswith("#")]
+        chats = [chat.strip() for chat in chats if chat and not chat.startswith("#")]
 
     except FileNotFoundError:
         logger.error(f"File \"{file_path}\" not found")
@@ -60,20 +59,47 @@ def get_chats(file_path: str) -> List[str]:
         return chats
 
 
-def create_db(db_name: str, targeted_chats: List[str]) -> str:
+def create_db(db_name: str, target_chats: List[str]) -> str:
     try:
-        db_data = {
-            "db_name": db_name,
-            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "members_count": 0,
-            "from_chats": targeted_chats,
-            "members": []
-        }
+        db_path = os.path.join(os.getcwd(), "results", f"{db_name}.db")
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-        with open(f"results/{db_name}.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps(db_data, indent=4, ensure_ascii=False))
+        if os.path.isfile(db_path):
+            logger.error(f"Database with the name \"{db_name}\" already exists")
+            sys.exit(1)
 
-        db_path = os.getcwd() + "/results/" + db_name + ".json"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS target_chats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_link VARCHAR(255) NOT NULL,
+                members_count INTEGER DEFAULT 0 NOT NULL
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER UNIQUE NOT NULL,
+                username VARCHAR(255),
+                first_name VARCHAR(255),
+                last_name VARCHAR(255),
+                phone_number VARCHAR(255),
+                target_chat_id INTEGER NOT NULL,
+                status VARCHAR(50) DEFAULT 'awaits' NOT NULL,
+                FOREIGN KEY (target_chat_id) REFERENCES target_chats(id)
+            )
+        ''')
+
+        for chat_link in target_chats:
+            cursor.execute('''
+                INSERT INTO target_chats (chat_link) 
+                VALUES (?)
+            ''', (chat_link,))
+
+        conn.commit()
+        conn.close()
 
     except Exception as ex:
         logger.error(f"Error while creating database, details: {ex}")
@@ -84,57 +110,71 @@ def create_db(db_name: str, targeted_chats: List[str]) -> str:
         return db_path
 
 
-def update_db(db_name: str, members: List[Dict]) -> int:
+def update_db(db_name: str, member: Dict):
     try:
-        with open(f"results/{db_name}.json", "r", encoding="utf-8") as f:
-            db_data = f.read()
+        db_path = os.path.join(os.getcwd(), "results", f"{db_name}.db")
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-        db_data_obj = json.loads(db_data)
+        cursor.execute('''
+            INSERT INTO members (telegram_id, username, first_name, last_name, phone_number, target_chat_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+                       (
+                           member["telegram_id"],
+                           member["username"],
+                           member["first_name"],
+                           member["last_name"],
+                           member["phone_number"],
+                           member["target_chat_id"]
+                       )
+                       )
 
-        members_list_new = db_data_obj["members"] + members
+        cursor.execute('''
+            UPDATE target_chats
+            SET members_count = members_count + 1
+            WHERE id = ?
+        ''', (member["target_chat_id"],))
 
-        db_data_new = {
-            "db_name": db_data_obj["db_name"],
-            "created_at": db_data_obj["created_at"],
-            "members_count": len(members_list_new),
-            "from_chats": db_data_obj["from_chats"],
-            "members": members_list_new
-        }
+        cursor.execute("SELECT COUNT(*) FROM members")
+        total_members_count = cursor.fetchone()[0]
 
-        with open(f"results/{db_name}.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps(db_data_new, indent=4, ensure_ascii=False))
+        conn.commit()
+        conn.close()
 
     except Exception as ex:
         logger.error(f"Error while updating database, details: {ex}")
 
     else:
-        logger.info(f"Database updated with total: {len(members_list_new)}")
-        return len(members_list_new)
+        logger.info(f"Database updated with total: {total_members_count}")
 
 
 async def main():
     txt_name = sys.argv[1]
-    txt_path = os.getcwd() + "/src/" + txt_name
-    db_name = txt_name.split(".")[0]
+    txt_path = os.path.join(os.getcwd(), "src", f"{txt_name}.txt")
+    os.makedirs(os.path.dirname(txt_path), exist_ok=True)
+    db_name = txt_name
 
-    targeted_chats = get_chats(txt_path)
-    create_db(db_name, targeted_chats)
+    target_chats_list = get_chats(txt_path)
+    db_path = create_db(db_name, target_chats_list)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
 
     current_chat = None
-    tg_lead_ids = []
-    lead_id = 1
-
     await bot.start()
 
     try:
-        my_account = await bot.get_me()
+        account = await bot.get_me()
         current_datetime = datetime.now()
-        for chat_link in targeted_chats:
+
+        cursor.execute('SELECT id, chat_link FROM target_chats')
+        target_chats = cursor.fetchall()
+
+        for chat in target_chats:
             try:
-                current_chat_members = []
-                current_chat_members_count = 0
-                current_chat = await bot.join_chat(chat_link)
-                logger.info(f"Joined chat: {chat_link}")
+                current_chat = await bot.join_chat(chat[1])
+                logger.info(f"Joined chat: {chat[1]}")
 
                 logger.info("Parsing type: list")
                 async for member in bot.get_chat_members(current_chat.id):
@@ -142,31 +182,27 @@ async def main():
                         if (member.user.is_bot or
                                 member.user.is_deleted or
                                 member.status == ChatMemberStatus.OWNER or
-                                member.user.id in tg_lead_ids or
-                                member.user.id == my_account.id or
+                                member.user.id == account.id or
                                 member.user.status == UserStatus.LONG_AGO):
                             continue
 
+                        cursor.execute("SELECT * FROM members WHERE telegram_id = ?", (member.user.id,))
+                        found_lead = cursor.fetchone()
+
+                        if found_lead:
+                            continue
+
                         lead = {
-                            "id": lead_id,
                             "telegram_id": member.user.id,
                             "username": member.user.username,
                             "first_name": member.user.first_name,
                             "last_name": member.user.last_name,
                             "phone_number": member.user.phone_number,
-                            "from_chat": chat_link,
-                            "status": "awaits"
+                            "target_chat_id": chat[0]
                         }
 
-                        tg_lead_ids.append(lead["telegram_id"])
-                        current_chat_members.append(lead)
-                        lead_id += 1
-                        current_chat_members_count += 1
+                        update_db(db_name, lead)
                         logger.info(lead)
-
-                        if len(current_chat_members) % 100 == 0:
-                            update_db(db_name, current_chat_members)
-                            current_chat_members.clear()
 
                     except Exception as ex:
                         logger.error(f"Error parsing list {member}, details: {ex}")
@@ -181,39 +217,36 @@ async def main():
 
                         if (message.from_user.is_bot or
                                 message.from_user.is_deleted or
-                                message.from_user.id in tg_lead_ids or
-                                message.from_user.id == my_account.id or
-                                message.from_user.status == UserStatus.LONG_AGO):
+                                message.from_user.id == account.id or
+                                message.from_user.status == UserStatus.LONG_AGO or
+                                message.sender_chat):
+                            continue
+
+                        cursor.execute("SELECT * FROM members WHERE telegram_id = ?", (message.from_user.id,))
+                        found_lead = cursor.fetchone()
+
+                        if found_lead:
                             continue
 
                         lead = {
-                            "id": lead_id,
                             "telegram_id": message.from_user.id,
                             "username": message.from_user.username,
                             "first_name": message.from_user.first_name,
                             "last_name": message.from_user.last_name,
                             "phone_number": message.from_user.phone_number,
-                            "from_chat": chat_link,
-                            "status": "awaits"
+                            "target_chat_id": chat[0]
                         }
 
-                        tg_lead_ids.append(lead["telegram_id"])
-                        current_chat_members.append(lead)
-                        lead_id += 1
-                        current_chat_members_count += 1
+                        update_db(db_name, lead)
                         logger.info(lead)
-
-                        if len(current_chat_members) % 100 == 0:
-                            update_db(db_name, current_chat_members)
-                            current_chat_members.clear()
 
                     except Exception as ex:
                         logger.error(f"Error parsing messages {message}, details: {ex}")
                         continue
 
-                if current_chat_members:
-                    logger.info(f"From {chat_link} received members: {current_chat_members_count}")
-                    update_db(db_name, current_chat_members)
+                cursor.execute("SELECT members_count FROM target_chats WHERE id = ?", (chat[0],))
+                current_chat_members_count = cursor.fetchone()[0]
+                logger.info(f"From {chat[1]} received members: {current_chat_members_count}")
 
             except Exception as ex:
                 logger.error(f"Error parsing members, details: {ex}")
@@ -225,15 +258,16 @@ async def main():
 
                 except Exception as ex:
                     logger.error(ex)
-                    logger.warning(f"Account was banned in: {chat_link}")
+                    logger.warning(f"Account was banned in: {chat[1]}")
 
                 else:
-                    logger.info(f"Leaved chat: {chat_link}")
+                    logger.info(f"Leaved chat: {chat[1]}")
 
     except Exception as ex:
         logger.error(ex)
 
     finally:
+        conn.close()
         await bot.stop()
 
 
