@@ -221,8 +221,9 @@ async def main():
                 continue
 
             finally:
-                await bot.leave_chat(current_chat.id)
-                logger.info(f"Leaved chat: {chat_link}")
+                if current_chat:
+                    await bot.leave_chat(current_chat.id)
+                    logger.info(f"Leaved chat: {chat_link}")
 
     finally:
         await bot.stop()
