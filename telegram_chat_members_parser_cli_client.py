@@ -7,6 +7,7 @@ import logging
 import configparser
 import sqlite3
 
+from pyrogram.errors import FloodWait
 from telethon import TelegramClient
 from telethon.tl import functions
 from telethon.tl.types import UserStatusLastMonth, ChatParticipantCreator
@@ -274,6 +275,10 @@ async def main():
 
                         update_db(db_name, lead)
 
+                    except FloodWaitError as e:
+                        logger.warning(f"Flood wait: {e.seconds} seconds")
+                        await asyncio.sleep(e.seconds)
+
                     except Exception as ex:
                         logger.error(f"Error parsing list {member}, details: {ex}")
                         continue
@@ -282,14 +287,19 @@ async def main():
                 logger.info("Contact with participants")
                 day = 0
                 async for message in telethon_client.iter_messages(current_chat_telethon):
-                    date_difference = current_datetime_telethon - message.date
+                    try:
+                        date_difference = current_datetime_telethon - message.date
 
-                    if date_difference.days > day:
-                        logger.info(f"Day: {date_difference.days}")
-                        day = date_difference.days
+                        if date_difference.days > day:
+                            logger.info(f"Day: {date_difference.days}")
+                            day = date_difference.days
 
-                    if date_difference.days >= days_limit:
-                        break
+                        if date_difference.days >= days_limit:
+                            break
+
+                    except FloodWaitError as e:
+                        logger.warning(f"Flood wait: {e.seconds} seconds")
+                        await asyncio.sleep(e.seconds)
 
                 async for message in pyrogram_client.get_chat_history(current_chat_pyrogram.id):
                     try:
@@ -329,6 +339,14 @@ async def main():
 
                         update_db(db_name, lead)
 
+                    except FloodWaitError as e:
+                        logger.warning(f"Flood wait: {e.seconds} seconds")
+                        await asyncio.sleep(e.seconds)
+
+                    except FloodWait as e:
+                        logger.warning(f"Flood wait: {e.value} seconds")
+                        await asyncio.sleep(e.value)
+
                     except Exception as ex:
                         logger.error(f"Error parsing messages {message}, details: {ex}")
                         continue
@@ -340,6 +358,10 @@ async def main():
             except FloodWaitError as e:
                 logger.warning(f"Flood wait: {e.seconds} seconds")
                 await asyncio.sleep(e.seconds)
+
+            except FloodWait as e:
+                logger.warning(f"Flood wait: {e.value} seconds")
+                await asyncio.sleep(e.value)
 
             except Exception as ex:
                 logger.error(f"Error parsing members, details: {ex}")
