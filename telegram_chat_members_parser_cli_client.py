@@ -238,7 +238,7 @@ async def main():
                             "phone": member.user.phone_number,
                             "photo": member.user.photo is not None,
                             "premium": member.user.is_premium,
-                            "target_chat_id": from_chat_id
+                            "from_chat_id": from_chat_id
                         }
 
                         update_db(db_name, lead)
