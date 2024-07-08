@@ -181,6 +181,7 @@ async def join_chat(link: str) -> Chat:
     except FloodWait as e:
         logger.warning(f"Flood wait: {e.value} seconds")
         await asyncio.sleep(e.value)
+        await join_chat(link)
 
 
 async def main():
