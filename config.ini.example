@@ -2,3 +2,6 @@
 session = Session-Name
 api_id = Telegram-API-ID
 api_hash = Telegram-API-Hash
+
+[Parser]
+history_period = Message-History-Period
