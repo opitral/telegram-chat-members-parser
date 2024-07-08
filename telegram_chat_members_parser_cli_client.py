@@ -216,7 +216,7 @@ async def main():
                 logger.info("Parsing type: list")
                 try:
                     async for member in bot.get_chat_members(current_chat.id):
-                        if (not (member.user.username or member.user.phone_number) or
+                        if (not member.user.username or
                                 member.user.is_bot or
                                 member.user.is_deleted or
                                 member.user.status == UserStatus.LONG_AGO or
@@ -259,7 +259,7 @@ async def main():
                             break
 
                         if (message.sender_chat or
-                                not (message.from_user.username or message.from_user.phone_number) or
+                                not message.from_user.username or
                                 message.from_user.is_bot or
                                 message.from_user.is_deleted or
                                 message.from_user.status == UserStatus.LONG_AGO or
