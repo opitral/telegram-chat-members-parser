@@ -37,7 +37,7 @@ config.read("config.ini")
 session = config["Telegram"]["session"]
 api_id = config["Telegram"]["api_id"]
 api_hash = config["Telegram"]["api_hash"]
-history_period = config["Parser"]["history_period"]
+history_period = int(config["Parser"]["history_period"])
 
 bot = Client(session, api_id, api_hash)
 logger.info(f"Session started: {session}")
@@ -255,7 +255,7 @@ async def main():
                 try:
                     async for message in bot.get_chat_history(current_chat.id):
                         date_difference = current_datetime - message.date
-                        if date_difference.days >= 90:
+                        if date_difference.days >= history_period:
                             break
 
                         if (message.sender_chat or
